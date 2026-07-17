@@ -23,7 +23,7 @@ pub const AA_ADDITIONAL_EVIDENCE_URL: &str = "/additional-evidence";
 pub const AA_AAEL_URL: &str = "/aael";
 
 pub struct AAClient {
-    client: AttestationAgentServiceClient,
+    aa_addr: String,
 }
 
 #[derive(Deserialize)]
@@ -35,12 +35,18 @@ pub struct AaelEvent {
 
 impl AAClient {
     pub async fn new(aa_addr: &str) -> Result<Self> {
-        let inner = ttrpc::asynchronous::Client::connect(aa_addr)
+        Ok(Self {
+            aa_addr: aa_addr.to_string(),
+        })
+    }
+    pub async fn new_client(&self) -> Result<AttestationAgentServiceClient> {
+        let inner = ttrpc::asynchronous::Client::connect(&self.aa_addr)
             .await
-            .context(format!("ttrpc connect to AA addr: {aa_addr} failed!"))?;
-        let client = AttestationAgentServiceClient::new(inner);
-
-        Ok(Self { client })
+            .context(format!(
+                "ttrpc connect to AA addr: {} failed!",
+                self.aa_addr
+            ))?;
+        Ok(AttestationAgentServiceClient::new(inner))
     }
 
     pub async fn get_token(&self, token_type: &str) -> Result<Vec<u8>> {
@@ -49,7 +55,8 @@ impl AAClient {
             ..Default::default()
         };
         let res = self
-            .client
+            .new_client()
+            .await?
             .get_token(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
             .await?;
         Ok(res.Token)
@@ -61,7 +68,8 @@ impl AAClient {
             ..Default::default()
         };
         let res = self
-            .client
+            .new_client()
+            .await?
             .get_evidence(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
             .await?;
         Ok(res.Evidence)
@@ -73,7 +81,8 @@ impl AAClient {
             ..Default::default()
         };
         let res = self
-            .client
+            .new_client()
+            .await?
             .get_additional_evidence(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
             .await?;
         Ok(res.Evidence)
@@ -92,7 +101,8 @@ impl AAClient {
             ..Default::default()
         };
         let res = self
-            .client
+            .new_client()
+            .await?
             .extend_runtime_measurement(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
             .await?
             .Result
@@ -113,7 +123,8 @@ impl AAClient {
             ..Default::default()
         };
         let res = self
-            .client
+            .new_client()
+            .await?
             .get_tee_type(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
             .await?;
         Ok(res.tee)
@@ -124,7 +135,8 @@ impl AAClient {
             ..Default::default()
         };
         let res = self
-            .client
+            .new_client()
+            .await?
             .get_additional_tees(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
             .await?;
         Ok(res.additional_tees)
